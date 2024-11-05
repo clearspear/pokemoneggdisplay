@@ -46,29 +46,85 @@ class Player:
 	text_label: tk.Label
 
 
+
+class DisplayFormatter:
+	def __init__(self, window, max_columns, max_rows, rectangle_w_to_h):
+		self.window_width= window.winfo_screenwidth()
+		self.window_height= window.winfo_screenheight()
+
+		self.max_columns = max_columns
+		self.max_rows = max_rows
+
+		self.rectangle_w_to_h = rectangle_w_to_h
+
+		self.button_rows = 2
+		self.rows_per_person = 2
+
+	def increase_player_count(self):
+		self.max_columns += 1
+		self.max_rows = self.max_columns // self.rectangle_w_to_h
+
+	def decrease_player_count(self):
+		self.max_columns -= 1
+		self.max_rows = self.max_columns // self.rectangle_w_to_h
+
+	def get_image_width(self):
+		return self.window_width // self.max_columns - 50
+
+	def get_image_row(self, player_index):
+		im_row = self.button_rows + self.rows_per_person * (player_index // self.max_columns)
+		return im_row
+
+	def get_image_column(self, player_index):
+		im_col = player_index % self.max_columns
+		return im_col
+
+	def get_text_row(self, player_index):
+		text_row = self.button_rows + 1 + self.rows_per_person * (player_index // self.max_columns)
+		return text_row
+
+	def get_text_column(self, player_index):
+		text_col = player_index % self.max_columns
+		return text_col
+
+	def get_max_player_count(self):
+		max_player_count = self.max_columns * self.max_rows
+		return max_player_count
+
+	def get_min_player_count(self):
+		smaller_count_max_rows = (self.max_columns - 1) // self.rectangle_w_to_h
+		min_player_count = (self.max_columns - 1) * smaller_count_max_rows + 1
+		return min_player_count
+
+
+
 class PokemonEggDisplay:
 	def __init__(self):
+
+		self.root_dir = "C:/Users/siche/OneDrive/Documents/git_repos/pokemoneggdisplay/"
+		self.gifs_dir = self.root_dir + "egggifs/"
+		self.data_dir = self.root_dir + "data/"
+
 		self.progression_chance = 0.5
-		self.max_columns = 2
 
 		self.players = []
 		self.num_eggs = 0
 
 		self.window = tk.Tk()
-		self.window_width= self.window.winfo_screenwidth() 
-		self.window_height= self.window.winfo_screenheight()
+
+		max_columns = 2
+		max_rows = 1
+		rectangle_w_to_h = 3 / 2
+		self.display_formatter = DisplayFormatter(self.window, max_columns, max_rows, rectangle_w_to_h)
 
 		self.window.configure(background='white')
 		self.window.title("EGG INCUBATOR")
-		self.window.geometry("%dx%d" % (self.window_width, self.window_height))
+		self.window.geometry("%dx%d" % (self.display_formatter.window_width, self.display_formatter.window_height))
 
-		initial_gif_size = self.window_width // self.max_columns - 10
 		self.gifs = []
-		self.gifs.append(Gif("C:/Users/siche/OneDrive/Documents/pokemoneggdisplay/egggifs/snorlax.gif", initial_gif_size))
-		self.gifs.append(Gif("C:/Users/siche/OneDrive/Documents/pokemoneggdisplay/egggifs/pikachucrop.gif", initial_gif_size))
-		# self.gifs.append(Gif("C:/Users/siche/OneDrive/Documents/pokemoneggdisplay/egggifs/egghatchcrop.gif"))
-
-		self.data_dir = "C:/Users/siche/OneDrive/Documents/pokemoneggdisplay/data/"
+		self.gifs.append(Gif(self.gifs_dir + "snorlax.gif", self.display_formatter.get_image_width()))
+		self.gifs.append(Gif(self.gifs_dir + "pikachucrop.gif", self.display_formatter.get_image_width()))
+		self.gifs.append(Gif(self.gifs_dir + "egghatchcrop.gif", self.display_formatter.get_image_width()))
 
 		# Add text entry box
 		self.text_box = tk.Entry(self.window, width = 30)
@@ -89,7 +145,7 @@ class PokemonEggDisplay:
 		self.animate()
 		self.regularly_backup_data()
 		self.load_data()
-		# self.gamba()
+		self.gamba()
 		self.window.mainloop()
 
 
@@ -102,6 +158,7 @@ class PokemonEggDisplay:
 					self.backup_data()
 		self.window.after(60000, lambda: self.gamba())
 
+
 	def animate(self):
 		for gif in self.gifs:
 			gif.change_frame()
@@ -111,10 +168,21 @@ class PokemonEggDisplay:
 			player.image_label.image = newImage
 		self.window.after(50, lambda: self.animate())
 
+
+	def load_data(self):
+		file_saves = os.listdir(self.data_dir)
+		last_save = sorted(file_saves)[-1]
+		f = open(self.data_dir + last_save, "r")
+		for player_data in f:
+			player_data = player_data.split(",")
+			self.add_player(player_data[0], player_data[1], int(player_data[2]))
+
+
 	def regularly_backup_data(self):
 		self.backup_data()
 		five_minute_timer = 60000 * 5
 		self.window.after(five_minute_timer, lambda: self.regularly_backup_data())
+
 
 	def backup_data(self):
 		if len(self.players) > 0:
@@ -123,14 +191,6 @@ class PokemonEggDisplay:
 			for player in self.players:
 				f.write(player.name + "," + player.time_created + "," + str(player.level) + "\n")
 
-	def load_data(self):
-		print("Loading data")
-		file_saves = os.listdir(self.data_dir)
-		last_save = sorted(file_saves)[-1]
-		f = open(self.data_dir + last_save, "r")
-		for player_data in f:
-			player_data = player_data.split(",")
-			self.add_player(player_data[0], player_data[1], int(player_data[2]))
 
 	def add_new_player(self):
 		player_name = self.text_box.get()
@@ -142,29 +202,25 @@ class PokemonEggDisplay:
 
 		player_creation_time = datetime.now().strftime('%H:%M:%S')
 		self.add_player(player_name, player_creation_time, 0)
+		self.text_box.delete(0, 'end')
+
 
 	def add_player(self, player_name, player_creation_time, player_level):
 		frame = self.gifs[player_level].get_current_frame()
 		image_label = tk.Label(self.window, bg="white", image=frame)
 		image_label.image = frame
-		image_label.grid(row=self.get_image_row(self.num_eggs), column=self.get_image_column(self.num_eggs))
+		image_label.grid(row=self.display_formatter.get_image_row(self.num_eggs), column=self.display_formatter.get_image_column(self.num_eggs))
 
 		text_label = tk.Label(self.window, bg="white", text=player_name, font=('Pokemon Classic', 20))
-		text_label.grid(row=self.get_text_row(self.num_eggs), column=self.get_text_column(self.num_eggs))
+		text_label.grid(row=self.display_formatter.get_text_row(self.num_eggs), column=self.display_formatter.get_text_column(self.num_eggs))
 
 		player = Player(player_name, player_creation_time, player_level, image_label, text_label)
 		self.players.append(player)
 
 		self.num_eggs += 1
 
-		# Resize images if full
-		if self.num_eggs > self.max_eggs():
-			self.max_columns += 1
-			width = self.window_width / self.max_columns - 10
-			for gif in self.gifs:
-				gif.update_size(width)
+		self.refresh_egg_display()
 
-		self.text_box.delete(0, 'end')
 
 	def remove_player(self):
 		player_name = self.text_box.get()
@@ -173,7 +229,6 @@ class PokemonEggDisplay:
 
 		for player in self.players:
 			if player.name == player_name:
-
 				player.image_label.config(image='')
 				player.text_label.config(text="")
 				self.text_box.delete(0, 'end')
@@ -181,36 +236,35 @@ class PokemonEggDisplay:
 				self.players.remove(player)
 				self.num_eggs -= 1
 
-				self.refresh_egg_locations()
-				return
+		self.refresh_egg_display()
+
+
+	def refresh_egg_display(self):
+		if self.num_eggs > self.display_formatter.get_max_player_count():
+			self.display_formatter.increase_player_count()
+
+			width = self.display_formatter.get_image_width()
+			for gif in self.gifs:
+				gif.update_size(width)
+
+		elif self.num_eggs < self.display_formatter.get_min_player_count():
+			self.display_formatter.decrease_player_count()
+
+			width = self.display_formatter.get_image_width()
+			for gif in self.gifs:
+				gif.update_size(width)
+
+		self.refresh_egg_locations()
+
 
 	def refresh_egg_locations(self):
 		i = 0
 		for player in self.players:
-			player.image_label.grid(row=self.get_image_row(i), column=self.get_image_column(i))
-			player.text_label.grid(row=self.get_text_row(i), column=self.get_text_column(i))
+			player.image_label.grid(row=self.display_formatter.get_image_row(i), column=self.display_formatter.get_image_column(i))
+			player.text_label.grid(row=self.display_formatter.get_text_row(i), column=self.display_formatter.get_text_column(i))
 			i += 1
 
-	def max_eggs(self):
-		return self.max_columns * self.max_columns * 2 // 3
-
-	def get_image_row(self, egg_num):
-		im_row = 2 + 2 * (egg_num // self.max_columns)
-		return im_row
-
-	def get_image_column(self, egg_num):
-		im_col = egg_num % self.max_columns
-		return im_col
-
-	def get_text_row(self, egg_num):
-		text_row = 3 + 2 * (egg_num // self.max_columns)
-		return text_row
-
-	def get_text_column(self, egg_num):
-		text_col = egg_num % self.max_columns
-		return text_col
 
 
 if __name__ == '__main__':
-	print("ilovepokemon")
 	PokemonEggDisplay()
