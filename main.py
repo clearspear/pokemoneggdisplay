@@ -42,6 +42,9 @@ class Player:
 	time_created: string
 	level: int
 
+	gamba_attempts: int
+	promotion_chance: float
+
 	image_label: tk.Label
 	text_label: tk.Label
 
@@ -149,13 +152,19 @@ class PokemonEggDisplay:
 		self.window.mainloop()
 
 
-	# Every minute, players have a 1% chance to progress stages
+	# Every minute, players have a chance to progress stages
 	def gamba(self):
 		for player in self.players:
 			if player.level < len(self.gifs) - 1:
-				if random.random() <= self.progression_chance:
+				if random.random() <= player.promotion_chance:
+					print("Player ", player.name, " progressed to stage ", player.level + 1, " after ", player.gamba_attempts, " attempts")
 					player.level += 1
+					player.promotion_chance = 0.0
+					player.gamba_attempts = 0
 					self.backup_data()
+				if random.random() <= 0.25:
+					player.promotion_chance += 0.0001 * player.gamba_attempts
+				player.gamba_attempts += 1
 		self.window.after(60000, lambda: self.gamba())
 
 
@@ -171,11 +180,13 @@ class PokemonEggDisplay:
 
 	def load_data(self):
 		file_saves = os.listdir(self.data_dir)
+		if len(file_saves) == 0:
+			return
 		last_save = sorted(file_saves)[-1]
 		f = open(self.data_dir + last_save, "r")
 		for player_data in f:
 			player_data = player_data.split(",")
-			self.add_player(player_data[0], player_data[1], int(player_data[2]))
+			self.add_player(player_data[0], player_data[1], int(player_data[2]), int(player_data[3]), float(player_data[4]))
 
 
 	def regularly_backup_data(self):
@@ -189,9 +200,9 @@ class PokemonEggDisplay:
 			new_file_name = self.data_dir + datetime.now().strftime('%y_%m_%d__%H_%M_%S') + "egg_data.csv"
 			f = open(new_file_name, "w")
 			for player in self.players:
-				f.write(player.name + "," + player.time_created + "," + str(player.level) + "\n")
+				f.write(player.name + "," + player.time_created + "," + str(player.level) + "," + str(player.gamba_attempts) + "," + str(player.promotion_chance) + "\n")
 
-
+ 
 	def add_new_player(self):
 		player_name = self.text_box.get()
 		if len(player_name) == 0:
@@ -201,11 +212,11 @@ class PokemonEggDisplay:
 				return
 
 		player_creation_time = datetime.now().strftime('%H:%M:%S')
-		self.add_player(player_name, player_creation_time, 0)
+		self.add_player(player_name, player_creation_time, 0, 0, 0.0)
 		self.text_box.delete(0, 'end')
 
 
-	def add_player(self, player_name, player_creation_time, player_level):
+	def add_player(self, player_name, player_creation_time, player_level, player_gamba_attempts, player_promotion_chance):
 		frame = self.gifs[player_level].get_current_frame()
 		image_label = tk.Label(self.window, bg="white", image=frame)
 		image_label.image = frame
@@ -214,7 +225,7 @@ class PokemonEggDisplay:
 		text_label = tk.Label(self.window, bg="white", text=player_name, font=('Pokemon Classic', 20))
 		text_label.grid(row=self.display_formatter.get_text_row(self.num_eggs), column=self.display_formatter.get_text_column(self.num_eggs))
 
-		player = Player(player_name, player_creation_time, player_level, image_label, text_label)
+		player = Player(player_name, player_creation_time, player_level, player_gamba_attempts, player_promotion_chance, image_label, text_label)
 		self.players.append(player)
 
 		self.num_eggs += 1
