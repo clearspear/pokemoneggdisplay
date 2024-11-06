@@ -8,6 +8,8 @@ import tkextrafont
 import tkinter as tk
 from PIL import Image, ImageTk
 
+
+
 class Gif:
 	def __init__(self, file_name, width):
 		im = Image.open(file_name)
@@ -36,6 +38,7 @@ class Gif:
 			self.frames.append(frame)
 
 
+
 @dataclass
 class Player:
 	name: string
@@ -45,8 +48,12 @@ class Player:
 	gamba_attempts: int
 	promotion_chance: float
 
+	hatched_pokemon: string
+
 	image_label: tk.Label
 	text_label: tk.Label
+
+	gif: Gif
 
 
 
@@ -106,6 +113,7 @@ class PokemonEggDisplay:
 
 		self.root_dir = "C:/Users/siche/OneDrive/Documents/git_repos/pokemoneggdisplay/"
 		self.gifs_dir = self.root_dir + "egggifs/"
+		self.hatched_gifs_dir = self.gifs_dir + "hatchedgifs/"
 		self.data_dir = self.root_dir + "data/"
 
 		self.progression_chance = 0.5
@@ -117,7 +125,7 @@ class PokemonEggDisplay:
 
 		max_columns = 2
 		max_rows = 1
-		rectangle_w_to_h = 3 / 2
+		rectangle_w_to_h = 2
 		self.display_formatter = DisplayFormatter(self.window, max_columns, max_rows, rectangle_w_to_h)
 
 		self.window.configure(background='white')
@@ -125,9 +133,14 @@ class PokemonEggDisplay:
 		self.window.geometry("%dx%d" % (self.display_formatter.window_width, self.display_formatter.window_height))
 
 		self.gifs = []
-		self.gifs.append(Gif(self.gifs_dir + "snorlax.gif", self.display_formatter.get_image_width()))
-		self.gifs.append(Gif(self.gifs_dir + "pikachucrop.gif", self.display_formatter.get_image_width()))
-		self.gifs.append(Gif(self.gifs_dir + "egghatchcrop.gif", self.display_formatter.get_image_width()))
+		self.gifs.append(Gif(self.gifs_dir + "stage1.gif", self.display_formatter.get_image_width()))
+		self.gifs.append(Gif(self.gifs_dir + "stage2.gif", self.display_formatter.get_image_width()))
+		self.gifs.append(Gif(self.gifs_dir + "stage3.gif", self.display_formatter.get_image_width()))
+
+		self.hatched_gifs = []
+		hatched_gif_files = os.listdir(self.hatched_gifs_dir)
+		for hatched_gif_file in hatched_gif_files:
+			self.hatched_gifs.append(Gif(self.hatched_gifs_dir + hatched_gif_file, self.display_formatter.get_image_width()))
 
 		# Add text entry box
 		self.text_box = tk.Entry(self.window, width = 30)
@@ -155,27 +168,39 @@ class PokemonEggDisplay:
 	# Every minute, players have a chance to progress stages
 	def gamba(self):
 		for player in self.players:
-			if player.level < len(self.gifs) - 1:
+			if player.level < len(self.gifs):
 				if random.random() <= player.promotion_chance:
-					print("Player ", player.name, " progressed to stage ", player.level + 1, " after ", player.gamba_attempts, " attempts")
-					player.level += 1
-					player.promotion_chance = 0.0
-					player.gamba_attempts = 0
-					self.backup_data()
+					self.promote(player)
 				if random.random() <= 0.25:
 					player.promotion_chance += 0.0001 * player.gamba_attempts
 				player.gamba_attempts += 1
 		self.window.after(60000, lambda: self.gamba())
 
 
+	def promote(self, player):
+		print("Player ", player.name, " progressed to stage ", player.level + 1, " after ", player.gamba_attempts, " attempts")
+		player.level += 1
+		player.promotion_chance = 0.0
+		player.gamba_attempts = 0
+
+		if player.level == len(self.gifs):
+			random_pokemon = random.randint(0, len(self.hatched_gifs) - 1)
+			player.hatched_pokemon = self.hatched_gifs[random_pokemon].file_name
+			player.gif = self.hatched_gifs[random_pokemon]
+		else:
+			player.gif = self.gifs[player.level]
+
+		self.backup_data()
+
+
 	def animate(self):
 		for gif in self.gifs:
 			gif.change_frame()
+		for hatched_gif in self.hatched_gifs:
+			hatched_gif.change_frame()
 		for player in self.players:
-			newImage = self.gifs[player.level].get_current_frame()
-			player.image_label.config(image = newImage)
-			player.image_label.image = newImage
-		self.window.after(50, lambda: self.animate())
+			player.image_label.config(image = player.gif.get_current_frame())
+		self.window.after(100, lambda: self.animate())
 
 
 	def load_data(self):
@@ -186,7 +211,8 @@ class PokemonEggDisplay:
 		f = open(self.data_dir + last_save, "r")
 		for player_data in f:
 			player_data = player_data.split(",")
-			self.add_player(player_data[0], player_data[1], int(player_data[2]), int(player_data[3]), float(player_data[4]))
+			player_data[-1] = player_data[-1].strip()
+			self.add_player(player_data[0], player_data[1], int(player_data[2]), int(player_data[3]), float(player_data[4]), player_data[5])
 
 
 	def regularly_backup_data(self):
@@ -200,7 +226,7 @@ class PokemonEggDisplay:
 			new_file_name = self.data_dir + datetime.now().strftime('%y_%m_%d__%H_%M_%S') + "egg_data.csv"
 			f = open(new_file_name, "w")
 			for player in self.players:
-				f.write(player.name + "," + player.time_created + "," + str(player.level) + "," + str(player.gamba_attempts) + "," + str(player.promotion_chance) + "\n")
+				f.write(player.name + "," + player.time_created + "," + str(player.level) + "," + str(player.gamba_attempts) + "," + str(player.promotion_chance) + "," + player.hatched_pokemon + "\n")
 
  
 	def add_new_player(self):
@@ -212,20 +238,25 @@ class PokemonEggDisplay:
 				return
 
 		player_creation_time = datetime.now().strftime('%H:%M:%S')
-		self.add_player(player_name, player_creation_time, 0, 0, 0.0)
+		self.add_player(player_name, player_creation_time, 0, 0, 0.0, "")
 		self.text_box.delete(0, 'end')
 
+		self.backup_data()
 
-	def add_player(self, player_name, player_creation_time, player_level, player_gamba_attempts, player_promotion_chance):
-		frame = self.gifs[player_level].get_current_frame()
-		image_label = tk.Label(self.window, bg="white", image=frame)
-		image_label.image = frame
+
+	def add_player(self, player_name, player_creation_time, player_level, player_gamba_attempts, player_promotion_chance, hatched_pokemon):
+		if hatched_pokemon == "":
+			gif = self.gifs[player_level]
+		else:
+			gif = next(hatched_gif for hatched_gif in self.hatched_gifs if hatched_gif.file_name == hatched_pokemon)
+
+		image_label = tk.Label(self.window, bg="white", image=gif.get_current_frame())
 		image_label.grid(row=self.display_formatter.get_image_row(self.num_eggs), column=self.display_formatter.get_image_column(self.num_eggs))
 
 		text_label = tk.Label(self.window, bg="white", text=player_name, font=('Pokemon Classic', 20))
 		text_label.grid(row=self.display_formatter.get_text_row(self.num_eggs), column=self.display_formatter.get_text_column(self.num_eggs))
 
-		player = Player(player_name, player_creation_time, player_level, player_gamba_attempts, player_promotion_chance, image_label, text_label)
+		player = Player(player_name, player_creation_time, player_level, player_gamba_attempts, player_promotion_chance, hatched_pokemon, image_label, text_label, gif)
 		self.players.append(player)
 
 		self.num_eggs += 1
@@ -253,19 +284,21 @@ class PokemonEggDisplay:
 	def refresh_egg_display(self):
 		if self.num_eggs > self.display_formatter.get_max_player_count():
 			self.display_formatter.increase_player_count()
-
-			width = self.display_formatter.get_image_width()
-			for gif in self.gifs:
-				gif.update_size(width)
+			self.update_gif_sizes()
 
 		elif self.num_eggs < self.display_formatter.get_min_player_count():
 			self.display_formatter.decrease_player_count()
-
-			width = self.display_formatter.get_image_width()
-			for gif in self.gifs:
-				gif.update_size(width)
+			self.update_gif_sizes()
 
 		self.refresh_egg_locations()
+
+
+	def update_gif_sizes(self):
+		width = self.display_formatter.get_image_width()
+		for gif in self.gifs:
+			gif.update_size(width)
+		for hatched_gif in self.hatched_gifs:
+			hatched_gif.update_size(width)
 
 
 	def refresh_egg_locations(self):
