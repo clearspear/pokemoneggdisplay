@@ -20,7 +20,7 @@ def simulate():
 		if gamba(percentage):
 			player_stage += 1
 		if random.random() <= 0.25:
-			percentage += 0.0001 * num_attempts
+			percentage += 0.0002 * num_attempts
 		num_attempts += 1
 
 	return num_attempts

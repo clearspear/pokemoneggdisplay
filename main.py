@@ -116,8 +116,6 @@ class PokemonEggDisplay:
 		self.hatched_gifs_dir = self.gifs_dir + "hatchedgifs/"
 		self.data_dir = self.root_dir + "data/"
 
-		self.progression_chance = 0.5
-
 		self.players = []
 		self.num_eggs = 0
 
@@ -134,7 +132,7 @@ class PokemonEggDisplay:
 
 		self.gifs = []
 		self.gifs.append(Gif(self.gifs_dir + "stage1.gif", self.display_formatter.get_image_width()))
-		self.gifs.append(Gif(self.gifs_dir + "stage2.gif", self.display_formatter.get_image_width()))
+		self.gifs.append(Gif(self.gifs_dir + "stage25.gif", self.display_formatter.get_image_width()))
 		self.gifs.append(Gif(self.gifs_dir + "stage3.gif", self.display_formatter.get_image_width()))
 
 		self.hatched_gifs = []
@@ -172,7 +170,7 @@ class PokemonEggDisplay:
 				if random.random() <= player.promotion_chance:
 					self.promote(player)
 				if random.random() <= 0.25:
-					player.promotion_chance += 0.0001 * player.gamba_attempts
+					player.promotion_chance += 0.0002 * player.gamba_attempts
 				player.gamba_attempts += 1
 		self.window.after(60000, lambda: self.gamba())
 
