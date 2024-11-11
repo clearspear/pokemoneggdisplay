@@ -111,7 +111,8 @@ class DisplayFormatter:
 class PokemonEggDisplay:
 	def __init__(self):
 
-		self.root_dir = "C:/Users/siche/OneDrive/Documents/git_repos/pokemoneggdisplay/"
+		#self.root_dir = "C:/Users/siche/OneDrive/Documents/git_repos/pokemoneggdisplay/"
+		self.root_dir = "C:/Users/Admin/OneDrive/Documents/git_repos/pokemoneggdisplay/"
 		self.gifs_dir = self.root_dir + "egggifs/"
 		self.hatched_gifs_dir = self.gifs_dir + "hatchedgifs/"
 		self.data_dir = self.root_dir + "data/"
@@ -172,7 +173,7 @@ class PokemonEggDisplay:
 				if random.random() <= 0.25:
 					player.promotion_chance += 0.0002 * player.gamba_attempts
 				player.gamba_attempts += 1
-		self.window.after(60000, lambda: self.gamba())
+		self.window.after(1000, lambda: self.gamba())
 
 
 	def promote(self, player):
@@ -215,7 +216,7 @@ class PokemonEggDisplay:
 
 	def regularly_backup_data(self):
 		self.backup_data()
-		five_minute_timer = 60000 * 5
+		five_minute_timer = 1000 * 5
 		self.window.after(five_minute_timer, lambda: self.regularly_backup_data())
 
 
@@ -251,7 +252,7 @@ class PokemonEggDisplay:
 		image_label = tk.Label(self.window, bg="white", image=gif.get_current_frame())
 		image_label.grid(row=self.display_formatter.get_image_row(self.num_eggs), column=self.display_formatter.get_image_column(self.num_eggs))
 
-		text_label = tk.Label(self.window, bg="white", text=player_name, font=('Pokemon Classic', 20))
+		text_label = tk.Label(self.window, bg="white", text=player_name, font=('Pokemon Classic', 16))
 		text_label.grid(row=self.display_formatter.get_text_row(self.num_eggs), column=self.display_formatter.get_text_column(self.num_eggs))
 
 		player = Player(player_name, player_creation_time, player_level, player_gamba_attempts, player_promotion_chance, hatched_pokemon, image_label, text_label, gif)
